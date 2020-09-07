@@ -3,6 +3,8 @@ from .models import Restaurant, Item
 from .forms import RestaurantForm, ItemForm, SignupForm, SigninForm
 from django.contrib.auth import login, authenticate, logout
 
+def noaccses(request):
+    return render(request,'page.html')
 def signup(request):
     form = SignupForm()
     if request.method == 'POST':
@@ -60,7 +62,9 @@ def restaurant_detail(request, restaurant_id):
 
 def restaurant_create(request):
     form = RestaurantForm()
-    if request.method == "POST":
+    if not request.user.is_authenticated:
+        return redirect('signin')
+    elif request.method == "POST":
         form = RestaurantForm(request.POST, request.FILES)
         if form.is_valid():
             restaurant = form.save(commit=False)
@@ -75,6 +79,8 @@ def restaurant_create(request):
 def item_create(request, restaurant_id):
     form = ItemForm()
     restaurant = Restaurant.objects.get(id=restaurant_id)
+    if not(restaurant.owner==request.user or request.user.is_staff):
+        return redirect('noaccses')
     if request.method == "POST":
         form = ItemForm(request.POST)
         if form.is_valid():
@@ -90,6 +96,8 @@ def item_create(request, restaurant_id):
 
 def restaurant_update(request, restaurant_id):
     restaurant_obj = Restaurant.objects.get(id=restaurant_id)
+    if not(restaurant_obj.owner==request.user or request.user.is_staff):
+        return redirect('noaccses')
     form = RestaurantForm(instance=restaurant_obj)
     if request.method == "POST":
         form = RestaurantForm(request.POST, request.FILES, instance=restaurant_obj)
@@ -104,5 +112,7 @@ def restaurant_update(request, restaurant_id):
 
 def restaurant_delete(request, restaurant_id):
     restaurant_obj = Restaurant.objects.get(id=restaurant_id)
+    if not(request.user.is_staff):
+        return redirect('noaccses')
     restaurant_obj.delete()
     return redirect('restaurant-list')
